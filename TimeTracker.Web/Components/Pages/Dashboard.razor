@@ -1,0 +1,46 @@
+﻿@page "/dashboard"
+@using TimeTracker.Web.Data
+
+@inject ApplicationDbContext dbContext
+
+<h3>Dashboard</h3>
+
+<div class="container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Stunden</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in projects)
+            {
+                <tr>
+                    <td>@project.Title</td>
+                    <td>@project.Description</td>
+                    <td>@entries.Where(x => x.ProjectId == project.Id).Sum(x => x.HoursWorked)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</div>
+
+@code {
+    List<Entry> entries = new();
+    List<Project> projects = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        entries = dbContext.Entries.ToList();
+        projects = dbContext.Projects.ToList();
+
+        foreach (var entry in entries)
+        {
+            entry.Project = dbContext.Projects.First(x => x.Id == entry.ProjectId);
+            entry.Employee = dbContext.Users.First(x => x.Id == entry.EmployeeId);
+        }
+    }
+}

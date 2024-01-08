@@ -1,0 +1,125 @@
+﻿@page "/tracker"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using TimeTracker.Web.Data
+
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext dbContext
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+
+@attribute [Authorize]
+
+<PageTitle>Entries</PageTitle>
+
+<h3 class="text-center fw-bold mb-4">Buchungen</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <EditForm Model="@entry" FormName="addEntry" OnValidSubmit="SaveEntry">
+                <div class="form-group">
+                    <label for="projects" class="text-center mb-2">Projekt</label>
+                    <select id="projects" @bind="selectedProjectId" class="form-control mb-3">
+                        @foreach (var project in projects)
+                        {
+                            <option value="@project.Id">@project.Title</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="description" class="text-center mb-2">Beschreibung der verrichteten Arbeit</label>
+                    <input id="description" class="form-control mb-2" @bind-value="entry.Description" />
+                </div>
+                <div class="form-group w-50 ">
+                    <label for="date" class="text-center mb-2">Datum</label>
+                    <input id="date" @bind-value="entry.Date" readonly="readonly" class="form-control mb-4 align-self-center" type="date" />
+                </div>
+                <div class="form-group w-50 ">
+                    <label for="start" class="text-center mb-2">Start</label>
+                    <input id="start" @bind-value="entry.Start" class="form-control mb-4 align-self-center" type="time" />
+                </div>
+                <div class="form-group w-50 ">
+                    <label for="end" class="text-center mb-2">Ende</label>
+                    <input id="end" @bind-value="entry.End" class="form-control mb-4 align-self-center" type="time" />
+                </div>
+                <button class="btn btn-primary w-50 mb-2 align-self-center">Buchung abschließen</button>
+            </EditForm>
+        </div>
+        <div class="col">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Stunden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in entries)
+                    {
+                        <tr>
+                            <td>@entry.Id</td>
+                            <td>@entry.Project.Title</td>
+                            <td>@entry.Project.Description</td>
+                            <td>@entry.HoursWorked</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    ApplicationUser currentUser;
+    List<Project> projects = new();
+    List<Entry> entries = new();
+    Entry entry = new();
+
+    int selectedProjectId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Refresh();
+        ClaimsPrincipal userClaims = (await SignInManager.Context.AuthenticateAsync()).Principal;
+        if (userClaims != null)
+            currentUser = await UserManager.GetUserAsync(userClaims);
+
+        if (currentUser is null)
+            return;
+
+        entry = new()
+        {
+            Date = DateOnly.FromDateTime(DateTime.Now),
+            Employee = currentUser,
+            EmployeeId = currentUser.Id
+        };
+    }
+
+    void Refresh()
+    {
+        projects = dbContext.Projects.ToList();
+        entries = dbContext.Entries.ToList();
+    }
+
+    void SaveEntry()
+    {
+        entry.ProjectId = selectedProjectId;
+        entry.Project = projects.First(x => x.Id == selectedProjectId);
+        dbContext.Entries.Add(entry);
+        dbContext.SaveChanges();
+        entry = new()
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now),
+                Employee = currentUser,
+                EmployeeId = currentUser.Id
+            };
+        Refresh();
+    }
+}

@@ -1,0 +1,84 @@
+﻿@page "/projects"
+@using System.ComponentModel.DataAnnotations
+@using TimeTracker.Web.Data
+
+@rendermode InteractiveServer
+@inject ApplicationDbContext dbContext
+
+<PageTitle>Projects</PageTitle>
+
+<h3 class="text-center fw-bold mb-4">Projekte</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <EditForm Model="@project" FormName="addProject" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="title">Title:</label>
+                    <input id="title" @bind-value="project.Title" class="form-control mb-3" type="text" />
+                    <ValidationMessage For="@(() => project.Title)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="desciption">Description:</label>
+                    <input id="desciption" @bind-value="project.Description" class="form-control mb-3" type="text" />
+                    <ValidationMessage For="@(() => project.Description)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary mb-3">Projekt erstellen</button>
+            </EditForm>
+        </div>
+
+        <div class="col">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var project in projects)
+                    {
+                        <tr>
+                            <td>@project.Id</td>
+                            <td>@project.Title</td>
+                            <td>@project.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+@code {
+    List<Project> projects = new List<Project>();
+    Project project = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Refresh();
+    }
+
+    void HandleValidSubmit()
+    {
+        dbContext.Projects.Add(project);
+        dbContext.SaveChanges();
+        project = new();
+        Refresh();
+    }
+
+    void Refresh()
+    {
+        projects = dbContext.Projects.ToList();
+    }
+}
